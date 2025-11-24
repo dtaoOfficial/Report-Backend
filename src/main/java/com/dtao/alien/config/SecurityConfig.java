@@ -52,7 +52,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // ✅ Public endpoints
-                        .requestMatchers("/api/auth/**", "/health", "/actuator/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/health", "/health", "/actuator/**").permitAll()
                         // 🔐 Protected routes
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "SYSTEM", "PRINCIPAL", "DEAN", "RESOURCES")
