@@ -7,10 +7,11 @@ import com.dtao.alien.model.User;
 import com.dtao.alien.security.JwtUtil;
 import com.dtao.alien.service.AuthService;
 import com.dtao.alien.service.CaptchaService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,8 +35,6 @@ public class AuthController {
     @Autowired
     private CaptchaService captchaService;
 
-    // NOTE: /get-captcha is now handled by CaptchaController.java
-
     // --- 1. REGISTER USER ---
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<String>> register(@Valid @RequestBody RegisterRequest request) {
@@ -52,7 +51,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Object>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
 
-        // A. Validate Captcha First (Using Service)
+        // A. Validate Captcha First
         boolean isCaptchaValid = captchaService.validateCaptcha(request.getCaptchaId(), request.getCaptchaAnswer());
         if (!isCaptchaValid) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Invalid or Expired Captcha", null));
@@ -71,15 +70,17 @@ public class AuthController {
         // C. Generate JWT
         String token = jwtUtil.generateToken(request.getEmail());
 
-        // D. Create HttpOnly Cookie
-        Cookie cookie = new Cookie("accessToken", token);
-        cookie.setHttpOnly(true); // JavaScript cannot read this (XSS Protection)
-        cookie.setSecure(false);  // Set TRUE in Production (Requires HTTPS)
-        cookie.setPath("/");
-        cookie.setMaxAge(24 * 60 * 60); // 1 Day
+        // ✅ D. Create HttpOnly Cookie for Render (Cross-Origin Safe)
+        ResponseCookie cookie = ResponseCookie.from("accessToken", token)
+                .httpOnly(true)
+                .secure(true) // HTTPS required on Render
+                .sameSite("None") // Allow from Netlify/localhost
+                .path("/")
+                .maxAge(24 * 60 * 60)
+                .build();
 
-        // E. Add Cookie to Response
-        response.addCookie(cookie);
+        // ✅ E. Add Cookie Header
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         // F. Fetch user info to include roles in response
         User user = authService.getUserByEmail(request.getEmail());
@@ -93,11 +94,14 @@ public class AuthController {
     // --- 4. LOGOUT ---
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("accessToken", null);
-        cookie.setHttpOnly(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // Delete immediately
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("accessToken", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(0)
+                .build();
+        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
