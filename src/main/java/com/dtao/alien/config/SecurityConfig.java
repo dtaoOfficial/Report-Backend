@@ -23,7 +23,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,7 +35,6 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
-    // ✅ Read CORS values from .env
     @Value("${cors.allowed.origins}")
     private String allowedOrigins;
 
@@ -53,7 +51,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // ✅ Public endpoints
+                        .requestMatchers("/api/auth/**", "/health", "/actuator/**").permitAll()
+                        // 🔐 Protected routes
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "SYSTEM", "PRINCIPAL", "DEAN", "RESOURCES")
                         .requestMatchers("/api/system/**").hasRole("SYSTEM")
