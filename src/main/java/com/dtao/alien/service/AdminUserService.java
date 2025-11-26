@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -58,6 +57,17 @@ public class AdminUserService {
             throw new RuntimeException("At least one role is required");
         }
 
+        // 🏫 ✅ Save department only for ROLE_USER
+        if ((request.getRole() != null && request.getRole().name().equals("ROLE_USER")) ||
+                (request.getRoles() != null && request.getRoles().stream().anyMatch(r -> r.name().equals("ROLE_USER")))) {
+
+            if (request.getDepartment() != null && !request.getDepartment().trim().isEmpty()) {
+                user.setDepartment(request.getDepartment());
+            } else {
+                throw new RuntimeException("Department is required for ROLE_USER");
+            }
+        }
+
         user.setVerified(true); // Admin-created users are verified
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
@@ -91,6 +101,11 @@ public class AdminUserService {
         existing.setPhoneNumber(updatedUser.getPhoneNumber());
         existing.setGender(updatedUser.getGender());
         existing.setAnimalName(updatedUser.getAnimalName());
+
+        // ✅ Update department if provided
+        if (updatedUser.getDepartment() != null && !updatedUser.getDepartment().trim().isEmpty()) {
+            existing.setDepartment(updatedUser.getDepartment());
+        }
 
         // Update password only if provided
         if (updatedUser.getPassword() != null && !updatedUser.getPassword().trim().isEmpty()) {

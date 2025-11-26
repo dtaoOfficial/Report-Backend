@@ -25,10 +25,20 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.getAllUsers());
     }
 
-    // ✅ Create New User
+    // ✅ Create New User (Supports department for ROLE_USER)
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<String>> createUser(@RequestBody AdminCreateUserRequest request) {
+
+        // 🏫 Validation: Department required for ROLE_USER
+        if ((request.getRole() != null && request.getRole().name().equals("ROLE_USER")) ||
+                (request.getRoles() != null && request.getRoles().stream().anyMatch(r -> r.name().equals("ROLE_USER")))) {
+
+            if (request.getDepartment() == null || request.getDepartment().trim().isEmpty()) {
+                throw new RuntimeException("Department is required for ROLE_USER");
+            }
+        }
+
         return ResponseEntity.ok(adminUserService.createUser(request));
     }
 
@@ -39,16 +49,20 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.deleteUser(id));
     }
 
-    // --- UPDATE EXISTING USER ---
+    // ✅ Update Existing User (Supports department)
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<User>> updateUser(
             @PathVariable String id,
             @RequestBody User updatedUser
     ) {
+        // 🏫 Optional check: prevent admin from clearing department for normal users
+        if ((updatedUser.getRoles() != null && updatedUser.getRoles().stream().anyMatch(r -> r.name().equals("ROLE_USER"))) &&
+                (updatedUser.getDepartment() == null || updatedUser.getDepartment().trim().isEmpty())) {
+            throw new RuntimeException("Department cannot be empty for ROLE_USER");
+        }
+
         User savedUser = adminUserService.updateUser(id, updatedUser);
         return ResponseEntity.ok(ApiResponse.success("User updated successfully", savedUser));
     }
-
-
 }

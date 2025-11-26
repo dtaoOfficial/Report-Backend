@@ -18,40 +18,41 @@ public class User {
 
     private String fullName;
 
-    @Indexed(unique = true) // Ensures no duplicate emails
+    @Indexed(unique = true)
     private String email;
 
-    private String phoneNumber; // Optional
+    private String phoneNumber;
+    private String password;
 
-    private String password; // Will be Hashed (BCrypt)
+    private Gender gender;
+    private String animalName;
 
-    private Gender gender; // Enum (Male, Female, Alien, God, Animal)
+    private Set<Role> roles;
 
-    private String animalName; // Only populated if Gender is ANIMAL
+    private boolean isVerified = false;
 
-    private Set<Role> roles; // Example: [ROLE_USER, ROLE_ADMIN]
-
-    private boolean isVerified = false; // False until OTP is verified
+    // 🏫 NEW FIELD: Department (like CSE, ECE, MECH, CIVIL, etc.)
+    private String department;
 
     // --- Auditing & Locking for Data Integrity ---
-    
     @CreatedDate
     private LocalDateTime createdAt;
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
-    @Version // Optimistic Locking (Prevents data overwrites)
+    @Version
     private Long version;
 
     // --- CONSTRUCTORS ---
 
-    // 1. No-Args Constructor (Required for MongoDB)
+    // 1️⃣ Default Constructor
     public User() {
     }
 
-    // 2. Constructor for Registration
-    public User(String fullName, String email, String phoneNumber, String password, Gender gender, String animalName, Set<Role> roles) {
+    // 2️⃣ Constructor for Registration (with department)
+    public User(String fullName, String email, String phoneNumber, String password,
+                Gender gender, String animalName, Set<Role> roles, String department) {
         this.fullName = fullName;
         this.email = email;
         this.phoneNumber = phoneNumber;
@@ -59,11 +60,12 @@ public class User {
         this.gender = gender;
         this.animalName = animalName;
         this.roles = roles;
+        this.department = department;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
 
-    // --- GETTERS AND SETTERS (Manual - No Lombok) ---
+    // --- GETTERS AND SETTERS ---
 
     public String getId() {
         return id;
@@ -137,6 +139,14 @@ public class User {
         isVerified = verified;
     }
 
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -162,12 +172,13 @@ public class User {
     }
 
     // --- TO STRING (For debugging) ---
-    
     @Override
     public String toString() {
         return "User{" +
                 "id='" + id + '\'' +
+                ", fullName='" + fullName + '\'' +
                 ", email='" + email + '\'' +
+                ", department='" + department + '\'' +
                 ", gender=" + gender +
                 ", isVerified=" + isVerified +
                 '}';

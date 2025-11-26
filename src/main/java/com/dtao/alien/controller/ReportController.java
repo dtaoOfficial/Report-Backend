@@ -4,6 +4,7 @@ import com.dtao.alien.dto.response.ApiResponse;
 import com.dtao.alien.model.Report;
 import com.dtao.alien.model.ReportStage;
 import com.dtao.alien.service.ReportService;
+import com.dtao.alien.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,15 +19,24 @@ public class ReportController {
     @Autowired
     private ReportService reportService;
 
+    @Autowired
+    private UserService userService; // ✅ For fetching name & department
+
     // 🧾 USER creates a new report
     @PostMapping("/create")
-    public ResponseEntity<ApiResponse<Report>> createReport(@RequestParam String title,
-                                                            @RequestParam String description,
-                                                            @RequestParam String location) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String name = email.split("@")[0]; // can be improved by fetching from UserRepository
+    public ResponseEntity<ApiResponse<Report>> createReport(
+            @RequestParam String title,
+            @RequestParam String description,
+            @RequestParam String location) {
 
-        Report report = reportService.createReport(title, description, location, email, name);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // ✅ Fetch user info using UserService
+        String name = userService.getUserDisplayName(email);
+        String department = userService.getUserDepartment(email);
+
+        Report report = reportService.createReport(title, description, location, email, name, department);
+
         return ResponseEntity.ok(ApiResponse.success("Report created successfully", report));
     }
 
@@ -45,7 +55,7 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.success("Fetched system stage reports", reports));
     }
 
-    // 🎓 PRINCIPAL dashboard (Handles both PRINCIPAL and FINAL_PRINCIPAL stages)
+    // 🎓 PRINCIPAL dashboard (only PRINCIPAL)
     @GetMapping("/principal")
     public ResponseEntity<ApiResponse<List<Report>>> getPrincipalReports() {
         List<Report> reports = reportService.getPrincipalReports();
@@ -74,9 +84,9 @@ public class ReportController {
             @RequestParam String comments) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .iterator().next().getAuthority();
-        String name = email.split("@")[0];
+        String role = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().iterator().next().getAuthority();
+        String name = userService.getUserDisplayName(email);
 
         Report updated = reportService.forwardReport(id, nextStage, role, name, comments);
         return ResponseEntity.ok(ApiResponse.success("Report forwarded successfully", updated));
@@ -89,12 +99,12 @@ public class ReportController {
             @RequestParam String comments) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .iterator().next().getAuthority();
-        String name = email.split("@")[0];
+        String role = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().iterator().next().getAuthority();
+        String name = userService.getUserDisplayName(email);
 
         Report updated = reportService.approveReport(id, role, name, comments);
-        return ResponseEntity.ok(ApiResponse.success("Report approved", updated));
+        return ResponseEntity.ok(ApiResponse.success("Report approved successfully", updated));
     }
 
     // ❌ REJECT report
@@ -104,12 +114,12 @@ public class ReportController {
             @RequestParam String reason) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .iterator().next().getAuthority();
-        String name = email.split("@")[0];
+        String role = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().iterator().next().getAuthority();
+        String name = userService.getUserDisplayName(email);
 
         Report updated = reportService.rejectReport(id, role, name, reason);
-        return ResponseEntity.ok(ApiResponse.success("Report rejected", updated));
+        return ResponseEntity.ok(ApiResponse.success("Report rejected successfully", updated));
     }
 
     // 🏁 RESOURCES completes report
@@ -120,12 +130,12 @@ public class ReportController {
             @RequestParam String comments) {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        String role = SecurityContextHolder.getContext().getAuthentication().getAuthorities()
-                .iterator().next().getAuthority();
-        String name = email.split("@")[0];
+        String role = SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().iterator().next().getAuthority();
+        String name = userService.getUserDisplayName(email);
 
         Report updated = reportService.completeReport(id, available, role, name, comments);
-        return ResponseEntity.ok(ApiResponse.success("Report completed", updated));
+        return ResponseEntity.ok(ApiResponse.success("Report completed successfully", updated));
     }
 
     // 🔍 Get single report by id
@@ -133,5 +143,12 @@ public class ReportController {
     public ResponseEntity<ApiResponse<Report>> getReportById(@PathVariable String id) {
         Report report = reportService.getReportById(id);
         return ResponseEntity.ok(ApiResponse.success("Fetched report successfully", report));
+    }
+
+    // 🧠 NEW: Fetch ALL reports (for admins or overview dashboards)
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<Report>>> getAllReports() {
+        List<Report> reports = reportService.getAllReports();
+        return ResponseEntity.ok(ApiResponse.success("Fetched all reports successfully", reports));
     }
 }

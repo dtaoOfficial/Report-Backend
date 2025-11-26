@@ -14,6 +14,8 @@ public class AdminCreateUserRequest {
     private String animalName; // Optional
     private Role role;         // ✅ single role (old support)
     private Set<Role> roles;   // ✅ new array support (frontend sends this)
+    private String department;
+
 
     // --- Getters & Setters ---
     public String getFullName() { return fullName; }
@@ -39,4 +41,8 @@ public class AdminCreateUserRequest {
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) { this.roles = roles; }
+
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+
 }

@@ -16,7 +16,6 @@ public interface ReportRepository extends MongoRepository<Report, String> {
 
     long countByStatus(ReportStatus status);
 
-
     // 🔍 Fetch reports by current single stage
     List<Report> findByCurrentStage(ReportStage stage);
 
@@ -25,4 +24,7 @@ public interface ReportRepository extends MongoRepository<Report, String> {
 
     // 🔍 Generic status-based filter (optional)
     List<Report> findByStatus(String status);
+
+    // 🧠 NEW (Optional): Fetch all reports sorted by last updated (latest first)
+    List<Report> findAllByOrderByUpdatedAtDesc();
 }

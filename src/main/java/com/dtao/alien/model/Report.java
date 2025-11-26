@@ -19,11 +19,12 @@ public class Report {
     private String description;
     private String location;
 
-    private String createdBy;     // email or user id
-    private String createdByName; // display name of reporter
+    private String createdBy;      // email or user id
+    private String createdByName;  // display name of reporter
+    private String department;     // 🏫 Department of the user who created report
 
     private ReportStatus status;      // PENDING, APPROVED, REJECTED, COMPLETED
-    private ReportStage currentStage; // USER, SYSTEM, PRINCIPAL, DEAN, FINAL_PRINCIPAL, RESOURCES
+    private ReportStage currentStage; // USER, SYSTEM, PRINCIPAL, DEAN, RESOURCES
 
     // --- For rejection tracking ---
     private boolean rejected;
@@ -33,6 +34,10 @@ public class Report {
     // --- For timeline/history ---
     private List<ReportHistoryEntry> history = new ArrayList<>();
 
+    // --- New field: roles that have already acted on this report ---
+    private List<String> lockedByRoles = new ArrayList<>();
+
+    // --- Status of the report ---
     private boolean isActive = true;
 
     @CreatedDate
@@ -44,12 +49,13 @@ public class Report {
     // --- Constructors ---
     public Report() {}
 
-    public Report(String title, String description, String location, String createdBy, String createdByName) {
+    public Report(String title, String description, String location, String createdBy, String createdByName, String department) {
         this.title = title;
         this.description = description;
         this.location = location;
         this.createdBy = createdBy;
         this.createdByName = createdByName;
+        this.department = department;  // ✅ department stored by default
         this.status = ReportStatus.PENDING;
         this.currentStage = ReportStage.SYSTEM; // first stage after user submits
         this.createdAt = LocalDateTime.now();
@@ -57,7 +63,6 @@ public class Report {
     }
 
     // --- Getters & Setters ---
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -75,6 +80,9 @@ public class Report {
 
     public String getCreatedByName() { return createdByName; }
     public void setCreatedByName(String createdByName) { this.createdByName = createdByName; }
+
+    public String getDepartment() { return department; }             // ✅ Getter
+    public void setDepartment(String department) { this.department = department; } // ✅ Setter
 
     public ReportStatus getStatus() { return status; }
     public void setStatus(ReportStatus status) { this.status = status; }
@@ -102,4 +110,7 @@ public class Report {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public List<String> getLockedByRoles() { return lockedByRoles; }
+    public void setLockedByRoles(List<String> lockedByRoles) { this.lockedByRoles = lockedByRoles; }
 }

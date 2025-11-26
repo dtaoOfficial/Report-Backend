@@ -19,6 +19,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
@@ -51,13 +54,13 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Object>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
 
-        // A. Validate Captcha First
+        // ✅ A. Validate Captcha
         boolean isCaptchaValid = captchaService.validateCaptcha(request.getCaptchaId(), request.getCaptchaAnswer());
         if (!isCaptchaValid) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Invalid or Expired Captcha", null));
         }
 
-        // B. Authenticate with Spring Security
+        // ✅ B. Authenticate User
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
@@ -67,28 +70,31 @@ public class AuthController {
             return ResponseEntity.status(401).body(ApiResponse.error("Invalid Credentials", null));
         }
 
-        // C. Generate JWT
+        // ✅ C. Generate JWT
         String token = jwtUtil.generateToken(request.getEmail());
 
-        // ✅ D. Create HttpOnly Cookie for Render (Cross-Origin Safe)
+        // ✅ D. Create HttpOnly Cookie for security (optional frontend use)
         ResponseCookie cookie = ResponseCookie.from("accessToken", token)
                 .httpOnly(true)
-                .secure(true) // HTTPS required on Render
-                .sameSite("None") // Allow from Netlify/localhost
+                .secure(true) // true for HTTPS; false for localhost testing
+                .sameSite("None")
                 .path("/")
                 .maxAge(24 * 60 * 60)
                 .build();
-
-        // ✅ E. Add Cookie Header
         response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
-        // F. Fetch user info to include roles in response
+        // ✅ E. Get User Details
         User user = authService.getUserByEmail(request.getEmail());
+        String role = user.getRoles().iterator().next().name(); // e.g. ROLE_SYSTEM
 
-        // G. Return success + role data for frontend routing
-        return ResponseEntity.ok(
-                ApiResponse.success("Login Successful", user.getRoles())
-        );
+        // ✅ F. Build Response Payload
+        Map<String, Object> data = new HashMap<>();
+        data.put("token", token);
+        data.put("user", user);
+        data.put("role", role);
+
+        // ✅ G. Return Unified API Response
+        return ResponseEntity.ok(ApiResponse.success("Login Successful", data));
     }
 
     // --- 4. LOGOUT ---
@@ -102,7 +108,6 @@ public class AuthController {
                 .maxAge(0)
                 .build();
         response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
