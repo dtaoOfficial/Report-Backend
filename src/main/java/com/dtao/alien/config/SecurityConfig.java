@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -35,14 +36,9 @@ public class SecurityConfig {
     @Autowired
     private CustomUserDetailsService userDetailsService;
 
-    @Value("${cors.allowed.origins}")
+    // ✅ READ FROM ENV (Default to localhost if env is missing)
+    @Value("${cors.allowed.origins:http://localhost:3000}")
     private String allowedOrigins;
-
-    @Value("${cors.allowed.methods}")
-    private String allowedMethods;
-
-    @Value("${cors.allowed.headers}")
-    private String allowedHeaders;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -53,14 +49,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // ✅ Public endpoints
                         .requestMatchers("/api/auth/**", "/api/health", "/health", "/actuator/**").permitAll()
+
                         // 🔐 Protected routes
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN", "SYSTEM", "PRINCIPAL", "DEAN", "RESOURCES")
-                        .requestMatchers("/api/system/**").hasRole("SYSTEM")
-                        .requestMatchers("/api/principal/**").hasRole("PRINCIPAL")
-                        .requestMatchers("/api/dean/**").hasRole("DEAN")
-                        .requestMatchers("/api/resources/**").hasRole("RESOURCES")
-                        .requestMatchers("/api/reports/**").hasAnyRole("USER", "SYSTEM", "PRINCIPAL", "DEAN", "RESOURCES", "ADMIN")
+                        .requestMatchers("/api/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/api/system/**").hasAuthority("ROLE_SYSTEM")
+                        .requestMatchers("/api/principal/**").hasAuthority("ROLE_PRINCIPAL")
+                        .requestMatchers("/api/dean/**").hasAuthority("ROLE_DEAN")
+                        .requestMatchers("/api/resources/**").hasAuthority("ROLE_RESOURCES")
+
+                        // Shared Roles
+                        .requestMatchers("/api/reports/**").hasAnyAuthority("ROLE_USER", "ROLE_SYSTEM", "ROLE_PRINCIPAL", "ROLE_DEAN", "ROLE_RESOURCES", "ROLE_ADMIN")
+                        .requestMatchers("/api/user/**").hasAnyAuthority("ROLE_USER", "ROLE_ADMIN", "ROLE_SYSTEM", "ROLE_PRINCIPAL", "ROLE_DEAN", "ROLE_RESOURCES")
+
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
@@ -89,9 +89,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+
+        // ✅ DYNAMIC FIX: Split the Env string by comma
+        // Example Env: "https://dtaoofficial.netlify.app,http://localhost:3000"
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList(allowedMethods.split(",")));
-        configuration.setAllowedHeaders(Arrays.asList(allowedHeaders.split(",")));
+
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

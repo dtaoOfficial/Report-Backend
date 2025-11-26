@@ -19,23 +19,36 @@ public class CustomUserDetailsService implements UserDetailsService {
     private UserRepository userRepository;
 
     @Override
-    @Transactional // Good for performance
+    @Transactional
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        
-        // 1. Find user in DB
+
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found with email: " + email));
 
-        // 2. Convert Roles (Enum) to Spring Authorities
+        // 🔍 DEBUG: See what is coming from Database
+        System.out.println("🔍 RAW DB ROLES for " + email + ": " + user.getRoles());
+
         var authorities = user.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.name()))
+                .map(role -> {
+                    String roleName = role.name();
+
+                    // ✅ SMART FIX: Only add "ROLE_" if it is NOT there already
+                    // This prevents "ROLE_ROLE_ADMIN" errors
+                    if (!roleName.startsWith("ROLE_")) {
+                        roleName = "ROLE_" + roleName;
+                    }
+
+                    return new SimpleGrantedAuthority(roleName);
+                })
                 .collect(Collectors.toList());
 
-        // 3. Return Spring's User Object
+        // 🔍 DEBUG: See what Spring Security is actually getting
+        System.out.println("✅ FINAL MAPPED AUTHORITIES: " + authorities);
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
                 user.getPassword(),
-                user.isVerified(), // enabled (only if verified)
+                user.isVerified(), // enabled
                 true, // accountNonExpired
                 true, // credentialsNonExpired
                 true, // accountNonLocked
