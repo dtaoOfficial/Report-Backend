@@ -19,23 +19,31 @@ public class CaptchaService {
     private static final String CAPTCHA_PREFIX = "captcha:";
 
     public Map<String, String> generateCaptcha() {
-        String captchaCode = RandomStringUtils.randomAlphanumeric(6);
+        // ✅ CHANGED: Generate 6-digit number only (e.g., "482910")
+        String captchaCode = RandomStringUtils.randomNumeric(6);
+
         String captchaId = UUID.randomUUID().toString();
 
+        // Save to Redis for validation (Expires in 5 mins)
         redisTemplate.opsForValue().set(
                 CAPTCHA_PREFIX + captchaId,
                 captchaCode,
-                Duration.ofMinutes(2)
+                Duration.ofMinutes(5)
         );
 
         Map<String, String> response = new HashMap<>();
         response.put("captchaId", captchaId);
-        response.put("captchaImage", captchaCode); // In real app, convert to Base64 Image
+        // Sending the number directly (Frontend handles the look)
+        response.put("captchaImage", captchaCode);
         return response;
     }
 
     public boolean validateCaptcha(String captchaId, String captchaAnswer) {
+        if (captchaId == null || captchaAnswer == null) return false;
+
         String cachedCaptcha = redisTemplate.opsForValue().get(CAPTCHA_PREFIX + captchaId);
+
+        // Simple string comparison
         return cachedCaptcha != null && cachedCaptcha.equals(captchaAnswer);
     }
 }
