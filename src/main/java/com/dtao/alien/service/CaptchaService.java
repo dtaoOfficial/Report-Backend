@@ -20,7 +20,7 @@ public class CaptchaService {
 
     public Map<String, String> generateCaptcha() {
         // ✅ CHANGED: Generate 6-digit number only (e.g., "482910")
-        String captchaCode = RandomStringUtils.randomNumeric(6);
+        String captchaCode = RandomStringUtils.randomNumeric(4);
 
         String captchaId = UUID.randomUUID().toString();
 
