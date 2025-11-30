@@ -4,7 +4,5 @@ public enum Role {
     ROLE_USER,
     ROLE_ADMIN,
     ROLE_SYSTEM,
-    ROLE_PRINCIPAL,
-    ROLE_DEAN,
-    ROLE_RESOURCES
+    ROLE_PRINCIPAL // ✅ removed ROLE_DEAN, ROLE_RESOURCES
 }

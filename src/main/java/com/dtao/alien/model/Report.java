@@ -45,6 +45,8 @@ public class Report {
 
     @LastModifiedDate
     private LocalDateTime updatedAt;
+    private String solvedNotes; // ✅ notes when system marks report completed
+
 
     // --- Constructors ---
     public Report() {}
@@ -113,4 +115,8 @@ public class Report {
 
     public List<String> getLockedByRoles() { return lockedByRoles; }
     public void setLockedByRoles(List<String> lockedByRoles) { this.lockedByRoles = lockedByRoles; }
+
+    public String getSolvedNotes() { return solvedNotes; }
+    public void setSolvedNotes(String solvedNotes) { this.solvedNotes = solvedNotes; }
+
 }

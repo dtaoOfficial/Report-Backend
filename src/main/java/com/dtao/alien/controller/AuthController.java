@@ -50,7 +50,7 @@ public class AuthController {
         return ResponseEntity.ok(authService.verifyOtp(email, otp));
     }
 
-    // --- 3. LOGIN (Sets HttpOnly Cookie + Return Role Info) ---
+    // --- 3. LOGIN ---
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<Object>> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
 
@@ -73,10 +73,10 @@ public class AuthController {
         // ✅ C. Generate JWT
         String token = jwtUtil.generateToken(request.getEmail());
 
-        // ✅ D. Create HttpOnly Cookie for security (optional frontend use)
+        // ✅ D. Create HttpOnly Cookie
         ResponseCookie cookie = ResponseCookie.from("accessToken", token)
                 .httpOnly(true)
-                .secure(true) // true for HTTPS; false for localhost testing
+                .secure(true) // true for HTTPS; false for localhost
                 .sameSite("None")
                 .path("/")
                 .maxAge(24 * 60 * 60)
@@ -85,7 +85,7 @@ public class AuthController {
 
         // ✅ E. Get User Details
         User user = authService.getUserByEmail(request.getEmail());
-        String role = user.getRoles().iterator().next().name(); // e.g. ROLE_SYSTEM
+        String role = user.getRoles().iterator().next().name();
 
         // ✅ F. Build Response Payload
         Map<String, Object> data = new HashMap<>();
@@ -93,7 +93,6 @@ public class AuthController {
         data.put("user", user);
         data.put("role", role);
 
-        // ✅ G. Return Unified API Response
         return ResponseEntity.ok(ApiResponse.success("Login Successful", data));
     }
 
@@ -111,7 +110,7 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
     }
 
-    // --- 5. FORGOT PASSWORD (Send OTP) ---
+    // --- 5. FORGOT PASSWORD ---
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<String>> forgotPassword(@RequestParam String email) {
         return ResponseEntity.ok(authService.requestPasswordReset(email));
@@ -127,5 +126,48 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<ApiResponse<String>> resetPassword(@RequestParam String email, @RequestParam String newPassword) {
         return ResponseEntity.ok(authService.resetPassword(email, newPassword));
+    }
+
+    // --- 8. 🔁 REFRESH TOKEN (NEW ENDPOINT) ---
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshToken(@RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Missing or invalid Authorization header", null)
+                );
+            }
+
+            String oldToken = authHeader.substring(7);
+            String username = jwtUtil.extractUsername(oldToken);
+
+            if (username == null || username.isBlank()) {
+                return ResponseEntity.status(401).body(
+                        ApiResponse.error("Invalid or expired token", null)
+                );
+            }
+
+            // ✅ Verify user still exists
+            User user = authService.getUserByEmail(username);
+            if (user == null) {
+                return ResponseEntity.status(404).body(
+                        ApiResponse.error("User not found", null)
+                );
+            }
+
+            // ✅ Generate new JWT
+            String newToken = jwtUtil.generateToken(username);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", newToken);
+
+            return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", data));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(
+                    ApiResponse.error("Token refresh failed: " + e.getMessage(), null)
+            );
+        }
     }
 }

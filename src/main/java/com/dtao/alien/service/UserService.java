@@ -1,5 +1,6 @@
 package com.dtao.alien.service;
 
+import com.dtao.alien.model.Role;
 import com.dtao.alien.model.User;
 import com.dtao.alien.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,34 @@ public class UserService {
                     : "General";
         } catch (Exception e) {
             return "General";
+        }
+    }
+
+    // ================================================================
+    // ✅ Helpers for history and "toDepartment / toName" formatting
+    // ================================================================
+
+    /**
+     * 🎓 Get Principal's name (used when forwarding to Principal)
+     */
+    public String getPrincipalName() {
+        try {
+            User principal = userRepository.findFirstByRoles(Role.ROLE_PRINCIPAL).orElse(null);
+            return principal != null ? principal.getFullName() : "Principal";
+        } catch (Exception e) {
+            return "Principal";
+        }
+    }
+
+    /**
+     * 🖥️ Get System Department user's name (used when forwarding to System)
+     */
+    public String getSystemUserName() {
+        try {
+            User systemUser = userRepository.findFirstByRoles(Role.ROLE_SYSTEM).orElse(null);
+            return systemUser != null ? systemUser.getFullName() : "System User";
+        } catch (Exception e) {
+            return "System User";
         }
     }
 }

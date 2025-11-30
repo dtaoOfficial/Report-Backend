@@ -17,18 +17,32 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Prefix for messages from server to client
-        config.enableSimpleBroker("/topic");
-        // Prefix for messages from client to server
+        // ✅ Enable broker for both report + notification channels
+        config.enableSimpleBroker("/topic/reports", "/topic/notifications");
+
+        // ✅ Prefix for client-to-server destinations (e.g. /app/send)
         config.setApplicationDestinationPrefixes("/app");
+
+        // ✅ Keep message order & heartbeat
+        config.setPreservePublishOrder(true);
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // WebSocket endpoint for frontend to connect
+        // ✅ Split allowed origins from .env (comma-separated)
         String[] origins = allowedOrigins.split(",");
+
+        // ✅ Main WebSocket endpoint (SockJS + native)
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(origins) // Reads dynamically from .env
-                .withSockJS(); // Fallback for browsers without native WebSocket
+                .setAllowedOrigins(origins) // e.g. http://localhost:3000, https://dtaoofficial.netlify.app
+                .setAllowedOriginPatterns("*") // allow both http and https (safe fallback)
+                .withSockJS()
+                .setHeartbeatTime(10000) // 10s keepalive
+                .setSessionCookieNeeded(false); // prevent JSESSIONID cookies for stateless APIs
+
+        // ✅ Optional: native websocket (no SockJS) — modern browsers use this
+        registry.addEndpoint("/ws")
+                .setAllowedOrigins(origins)
+                .setAllowedOriginPatterns("*");
     }
 }
